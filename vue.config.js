@@ -11,5 +11,17 @@ module.exports = {
         prependData: `@import "~@/styles/variables.scss";`
       }
     }
+  },
+  devServer: {
+    proxy: {
+      '/boss': {
+        target: 'http://eduboss.lagou.com',
+        changeOrigin: true // 把请求头中的 host 配置为 target,防止后端反向代理服务器无法识别
+      },
+      '/front': {
+        target: 'http://edufront.lagou.com',
+        changeOrigin: true
+      }
+    }
   }
 }
