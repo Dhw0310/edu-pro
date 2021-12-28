@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import VueRouter, { RouteConfig } from 'vue-router'
 import Layout from '@/views/layout/index.vue'
+import store from '@/store'
 
 Vue.use(VueRouter)
 
@@ -13,6 +14,9 @@ const routes: Array<RouteConfig> = [
   {
     path: '/',
     component: Layout,
+    meta: {
+      requiresAuth: true // 父路由配置后，根据matched，访问子路由时，也需匹配父路由
+    }, // meta 默认就有，是个空对象
     children: [
       {
         path: '/',
@@ -66,5 +70,20 @@ const routes: Array<RouteConfig> = [
 const router = new VueRouter({
   routes
 })
-
+router.beforeEach((to, from, next) => {
+  if (to.matched.some(record => record.meta.requiresAuth)) {
+    if (!store.state.user) {
+      next({
+        name: 'login',
+        query: { // 通过 url 传递查询字符串参数
+          redirect: to.fullPath
+        }
+      })
+    } else {
+      next()
+    }
+  } else {
+    next()
+  }
+})
 export default router
