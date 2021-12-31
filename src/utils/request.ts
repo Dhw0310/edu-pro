@@ -7,8 +7,10 @@ const request = axios.create({
   // 配置选项
   baseURL: ''
 })
+let isRfeshing = false // 控制 token 刷新的状态
+let requests: (() => void)[] = [] // 存储刷新 token 期间过来的 401 请求
 // 请求拦截器
-request.interceptors.request.use(function(config: { headers: { Authorization: string } }) {
+request.interceptors.request.use(function(config: any) {
   const { user } = store.state
   if (user && user.access_token) {
     config.headers.Authorization = user.access_token
@@ -34,24 +36,32 @@ request.interceptors.response.use(function(response) {
       if (!store.state.user) {
         redirectLogin(error)
       }
-      // 如果有 refresh_token 则尝试使用 refresh_token 获取新的 access_token
-      try {
-        const { data } = await axios.create()({
-          method: 'POST',
-          url: '/front/user/refresh_token',
-          data: qs.stringify({
-            refreshtoken: store.state.user.refresh_token
-          })
+      if (!isRfeshing) {
+        isRfeshing = true
+        // 如果有 refresh_token 则尝试使用 refresh_token 获取新的 access_token
+        return refreshToken().then(res => {
+          console.log(res)
+          if (!res.data.success) {
+            throw new Error('刷新 token 失败')
+          } else {
+            store.commit('setUser', res.data.content)
+            requests.forEach(cb => cb())
+            requests = []
+            return request(error.config)
+          }
+        }).catch(err => {
+          store.commit('setUser', null)
+          redirectLogin(err)
+        }).finally(() => {
+          isRfeshing = false // 重置刷新状态
         })
-        console.log('data', data)
-        store.commit('setUser', data.content)
-        // error.config 失败请求的配置信息
-        console.log(error.config)
-        return request(error.config)
-      } catch (err) {
-        store.commit('setUser', null)
-        redirectLogin(err)
       }
+      // 刷新状态下，把请求挂起放到 requests 数组中
+      return new Promise(resolve => {
+        requests.push(() => {
+          resolve(request(error.config))
+        })
+      })
     } else if (status === 403) {
       Message.error('没有权限，请联系管理员')
     } else if (status === 404) {
@@ -78,5 +88,14 @@ function redirectLogin(error: unknown) {
     }
   })
   return Promise.reject(error)
+}
+function refreshToken() {
+  return axios.create()({
+    method: 'POST',
+    url: '/front/user/refresh_token',
+    data: qs.stringify({
+      refreshtoken: store.state.user.refresh_token
+    })
+  })
 }
 export default request
