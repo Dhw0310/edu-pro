@@ -23,14 +23,14 @@ export const login = (data: User): any => {
   })
 }
 
-export const getUserInfo = (): unknown => {
+export const getUserInfo = (): any => {
   return request({
     method: 'GET',
     url: '/front/user/getInfo'
   })
 }
 
-export const getUserPages = (data: any): unknown => {
+export const getUserPages = (data: any): any => {
   return request({
     method: 'POST',
     url: '/boss/user/getUserPages',
@@ -38,7 +38,7 @@ export const getUserPages = (data: any): unknown => {
   })
 }
 
-export const forbidUser = (userId: string | number): unknown => {
+export const forbidUser = (userId: string | number): any => {
   return request({
     method: 'POST',
     url: '/boss/user/forbidUser',
