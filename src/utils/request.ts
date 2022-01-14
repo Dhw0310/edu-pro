@@ -1,19 +1,37 @@
 import router from '@/router'
 import store from '@/store'
-import axios from 'axios'
+import axios, { AxiosRequestConfig, AxiosRequestHeaders } from 'axios'
 import { Message } from 'element-ui'
 import qs from 'qs'
 const request = axios.create({
   // 配置选项
-  baseURL: ''
+  baseURL: '/'
 })
-let isRfeshing = false // 控制 token 刷新的状态
+
+function redirectLogin() {
+  router.push({
+    name: 'login',
+    query: {
+      redirect: router.currentRoute.fullPath
+    }
+  })
+}
+function refreshToken() {
+  return axios.create()({
+    method: 'POST',
+    url: '/front/user/refresh_token',
+    data: qs.stringify({
+      refreshtoken: store.state.user.refresh_token
+    })
+  })
+}
+let isRfreshing = false // 控制 token 刷新的状态
 let requests: (() => void)[] = [] // 存储刷新 token 期间过来的 401 请求
 // 请求拦截器
-request.interceptors.request.use(function(config: any) {
+request.interceptors.request.use(function(config: AxiosRequestConfig<any>) {
   const { user } = store.state
   if (user && user.access_token) {
-    config.headers.Authorization = user.access_token
+    (config.headers as AxiosRequestHeaders).Authorization = user.access_token
   }
   return config
 }, function(error) {
@@ -26,34 +44,38 @@ request.interceptors.response.use(function(response) {
   if (error.response) {
     const { status } = error.response
     // 请求成功发出且服务器也响应了状态码，但状态代码超出了 2xx 的范围
-    console.log(error.response.data)
-    console.log(error.response.status)
-    console.log(error.response.headers)
+    // console.log(error.response.data)
+    // console.log(error.response.status)
+    // console.log(error.response.headers)
     if (status === 400) {
       Message.error('请求参数错误')
     } else if (status === 401) {
       // token 无效（没有提供 token、token 是无效的、token 过期了）
       if (!store.state.user) {
-        redirectLogin(error)
+        redirectLogin()
+        return Promise.reject(error)
       }
-      if (!isRfeshing) {
-        isRfeshing = true
+      if (!isRfreshing) {
+        isRfreshing = true
         // 如果有 refresh_token 则尝试使用 refresh_token 获取新的 access_token
         return refreshToken().then(res => {
           console.log(res)
           if (!res.data.success) {
             throw new Error('刷新 token 失败')
-          } else {
-            store.commit('setUser', res.data.content)
-            requests.forEach(cb => cb())
-            requests = []
-            return request(error.config)
           }
+          store.commit('setUser', res.data.content)
+          console.log('requests', requests)
+
+          requests.forEach(cb => cb())
+          requests = []
+          return request(error.config)
         }).catch(err => {
+          Message.warning('登录已过期，请重新登录')
           store.commit('setUser', null)
-          redirectLogin(err)
+          redirectLogin()
+          return Promise.reject(err)
         }).finally(() => {
-          isRfeshing = false // 重置刷新状态
+          isRfreshing = false // 重置刷新状态
         })
       }
       // 刷新状态下，把请求挂起放到 requests 数组中
@@ -80,22 +102,4 @@ request.interceptors.response.use(function(response) {
   }
   return Promise.reject(error)
 })
-function redirectLogin(error: unknown) {
-  router.push({
-    name: 'login',
-    query: {
-      redirect: router.currentRoute.fullPath
-    }
-  })
-  return Promise.reject(error)
-}
-function refreshToken() {
-  return axios.create()({
-    method: 'POST',
-    url: '/front/user/refresh_token',
-    data: qs.stringify({
-      refreshtoken: store.state.user.refresh_token
-    })
-  })
-}
 export default request

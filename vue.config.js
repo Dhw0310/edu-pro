@@ -1,5 +1,7 @@
+const debug = process.env.NODE_ENV !== 'production'
 module.exports = {
   css: {
+    extract: true,
     loaderOptions: {
       // 默认情况下 `sass` 选项会同时对 `sass` 和 `scss` 语法同时生效
       // 因为 `scss` 语法在内部也是由 sass-loader 处理的
@@ -13,6 +15,7 @@ module.exports = {
     }
   },
   devServer: {
+    hot: true,
     proxy: {
       '/boss': {
         target: 'http://eduboss.lagou.com',
@@ -22,6 +25,11 @@ module.exports = {
         target: 'http://edufront.lagou.com',
         changeOrigin: true
       }
+    }
+  },
+  configureWebpack: config => {
+    if (debug) { // 开发环境配置
+      config.devtool = 'source-map'
     }
   }
 }

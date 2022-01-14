@@ -1,110 +1,53 @@
 import Vue from 'vue'
-import VueRouter, { RouteConfig } from 'vue-router'
-import Layout from '@/views/layout/index.vue'
+import VueRouter from 'vue-router'
 import store from '@/store'
+import routes from './module/index'
+import nprogress from 'nprogress'
+import 'nprogress/nprogress.css'
 
 Vue.use(VueRouter)
-
-const routes: Array<RouteConfig> = [
-  {
-    path: '/login',
-    name: 'login',
-    component: () => import(/* webpackChunkName: 'login' */ '@/views/login/index.vue')
-  },
-  {
-    path: '/',
-    component: Layout,
-    meta: {
-      requiresAuth: true // 父路由配置后，根据matched，访问子路由时，也需匹配父路由
-    }, // meta 默认就有，是个空对象
-    children: [
-      {
-        path: '/',
-        name: 'home',
-        component: () => import(/* webpackChunkName: 'home' */ '@/views/home/index.vue')
-      },
-      {
-        path: '/role',
-        name: 'role',
-        component: () => import(/* webpackChunkName: 'role' */ '@/views/role/index.vue')
-      },
-      {
-        path: '/role/:roleId/alloc-menu',
-        name: 'alloc-menu',
-        component: () => import(/* webpackChunkName: 'alloc-menu' */ '@/views/role/alloc-menu.vue'),
-        props: true // 将路由路径映射到组件的 props 数据中（路由数据名称和组件中props属性名称一致。为了路由和组件解耦。例：:roleId props:{roleId },）
-      },
-      {
-        path: '/menu',
-        name: 'menu',
-        component: () => import(/* webpackChunkName: 'menu' */ '@/views/menu/index.vue')
-      },
-      {
-        path: '/menu/create',
-        name: 'menu-create',
-        component: () => import(/* webpackChunkName: 'menu-create-edit' */ '@/views/menu/create.vue')
-      },
-      {
-        path: '/menu/:id/edit',
-        name: 'menu-edit',
-        component: () => import(/* webpackChunkName: 'menu-create-edit' */ '@/views/menu/edit.vue')
-      },
-      {
-        path: '/resource',
-        name: 'resource',
-        component: () => import(/* webpackChunkName: 'resource' */ '@/views/resource/index.vue')
-      },
-      {
-        path: '/course',
-        name: 'course',
-        component: () => import(/* webpackChunkName: 'course' */ '@/views/course/index.vue')
-      },
-      {
-        path: '/course/create',
-        name: 'course-create',
-        component: () => import(/* webpackChunkName: 'course-create' */ '@/views/course/create.vue')
-      },
-      {
-        path: '/user',
-        name: 'user',
-        component: () => import(/* webpackChunkName: 'user' */ '@/views/user/index.vue')
-      },
-      {
-        path: '/advert',
-        name: 'advert',
-        component: () => import(/* webpackChunkName: 'advert' */ '@/views/advert/index.vue')
-      },
-      {
-        path: '/advert-space',
-        name: 'advert-space',
-        component: () => import(/* webpackChunkName: 'advert-space' */ '@/views/advert-space/index.vue')
-      }
-    ]
-  },
-  {
-    path: '*',
-    name: '404',
-    component: () => import(/* webpackChunkName: 'error-page' */ '@/views/error-page/index.vue')
-  }
-]
 
 const router = new VueRouter({
   routes
 })
-router.beforeEach((to, from, next) => {
-  if (to.matched.some(record => record.meta.requiresAuth)) {
+router.beforeEach(async (to, from, next) => {
+  nprogress.start()
+  if (to.matched.some(recode => recode.meta.requiresAuth)) {
     if (!store.state.user) {
-      next({
+      return next({
         name: 'login',
-        query: { // 通过 url 传递查询字符串参数
+        query: {
           redirect: to.fullPath
         }
       })
-    } else {
-      next()
     }
-  } else {
-    next()
+    // 如果登录了，校验访问权限
   }
+  // const data = await store.dispatch('getUserPermissons')
+  // console.log(data)
+  const { menuList } = await store.dispatch('getUserPermissons')
+  console.log(menuList)
+
+  next()
 })
+
+router.afterEach(() => {
+  nprogress.done()
+})
+// router.beforeEach((to, from, next) => {
+//   if (to.matched.some(record => record.meta.requiresAuth)) {
+//     if (!store.state.user) {
+//       next({
+//         name: 'login',
+//         query: { // 通过 url 传递查询字符串参数
+//           redirect: to.fullPath
+//         }
+//       })
+//     } else {
+//       next()
+//     }
+//   } else {
+//     next()
+//   }
+// })
 export default router

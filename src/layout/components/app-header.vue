@@ -1,11 +1,7 @@
 <template>
   <div class="header">
-    <el-breadcrumb separator-class="el-icon-arrow-right">
-      <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-      <el-breadcrumb-item>活动管理</el-breadcrumb-item>
-      <el-breadcrumb-item>活动列表</el-breadcrumb-item>
-      <el-breadcrumb-item>活动详情</el-breadcrumb-item>
-    </el-breadcrumb>
+    <!-- Brandcrumb -->
+    <Breadcrumb />
     <el-dropdown>
       <span class="el-dropdown-link">
         <el-avatar shape="square"
@@ -24,6 +20,7 @@
 <script>
 import Vue from 'vue'
 import { getUserInfo } from '@/services/user'
+import Breadcrumb from '@/components/Breadcrumb/index.vue'
 
 export default Vue.extend({
   name: 'AppHeader',
@@ -32,6 +29,7 @@ export default Vue.extend({
       userInfo: {}
     }
   },
+  components: { Breadcrumb },
   methods: {
     async loadUserInfo() {
       const { data } = await getUserInfo()
@@ -59,6 +57,7 @@ export default Vue.extend({
   },
   created() {
     this.loadUserInfo()
+    console.log(this.$router.currentRoute.matched)
   }
 })
 </script>
